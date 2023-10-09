@@ -128,7 +128,8 @@ class DeferCss {
    *   Updated html string.
    */
   protected function callback(array $matches) {
-    $css_loader = '/modules/minify_assets/src/async-css.js';
+    $module_path = \Drupal::service('extension.list.module')->getPath('minify_assets');
+    $css_loader = "{$module_path}/src/async-css.js";
     return "<link rel='preload' {$matches[1]} {$matches[2]} as='style' {$matches[3]}/>
       <script src='{$css_loader}' ></script>
       <noscript>{$matches[0]}</noscript>";
