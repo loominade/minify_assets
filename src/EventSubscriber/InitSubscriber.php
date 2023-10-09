@@ -3,9 +3,8 @@
 namespace Drupal\minify_assets\EventSubscriber;
 
 use Drupal\minify_assets\Asset\DeferCss;
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Render\HtmlResponse;
-use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
+use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -86,7 +85,7 @@ class InitSubscriber implements EventSubscriberInterface {
    * @param \Symfony\Component\HttpKernel\Event\FilterResponseEvent $response
    *   The response event object.
    */
-  public function deferCss(FilterResponseEvent $response) {
+  public function deferCss(ResponseEvent $response) {
 
     $response = $response->getResponse();
 

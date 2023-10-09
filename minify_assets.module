@@ -44,7 +44,7 @@ function minif_assets_minify_css($path) {
   $new_path = 'public://minified/' . $hash . '.min.css';
 
   if (!file_exists($new_path)) {
-    $css_optimizer = new CssOptimizer();
+    $css_optimizer = new CssOptimizer(\Drupal::service('file_url_generator'));
     $style = $css_optimizer->loadFile($path, TRUE);
     $minified_dir = 'public://minified/';
     $css_optimizer->rewriteFileURIBasePath = dirname($path) . '/';
