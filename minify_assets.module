@@ -1,0 +1,78 @@
+<?php
+
+use Drupal\Core\Asset\CssOptimizer;
+use Drupal\Core\File\FileSystemInterface;
+use MatthiasMullie\Minify;
+
+function minify_assets_css_alter(&$css, \Drupal\Core\Asset\AttachedAssetsInterface $assets) {
+  if (\Drupal::config('minify_assets.config')->get('minify_css') ?? TRUE) {
+    foreach (array_keys($css) as $name) {
+      if ($css[$name]['type'] === 'file' && (!isset($css[$name]['minified']) || !$css[$name]['minified'])) {
+        $css[$name]['data'] = minif_assets_minify_css($name);
+        $css[$name]['minified'] = TRUE;
+        $css[$name]['preprocessed'] = TRUE;
+      }
+    }
+  }
+}
+
+function minify_assets_js_alter(&$javascript, \Drupal\Core\Asset\AttachedAssetsInterface $assets) {
+  
+  // list of drupal placeholder files that don't actually exist.
+  // see `core/modules/locale/locale.libraries.yml:19`
+  $placeholder_files = [
+    'core/modules/locale/locale.translation.js',
+  ];
+
+  if (\Drupal::config('minify_assets.config')->get('minify_js') ?? TRUE) {
+    foreach (array_keys($javascript) as $name) {
+      if (in_array($name, $placeholder_files)) {
+        continue;
+      }
+      if ($javascript[$name]['type'] === 'file' && !$javascript[$name]['minified']) {
+        $javascript[$name]['data'] = minif_assets_minify_js($name);
+        $javascript[$name]['minified'] = TRUE;
+        $javascript[$name]['preprocessed'] = TRUE;
+      }
+    }
+  }
+}
+
+function minif_assets_minify_css($path) {
+  $file_system = \Drupal::service('file_system');
+  $hash = hash_file("md5", $path);
+  $new_path = 'public://minified/' . $hash . '.min.css';
+
+  if (!file_exists($new_path)) {
+    $css_optimizer = new CssOptimizer();
+    $style = $css_optimizer->loadFile($path, TRUE);
+    $minified_dir = 'public://minified/';
+    $css_optimizer->rewriteFileURIBasePath = dirname($path) . '/';
+
+    $file_system->prepareDirectory($minified_dir, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+    $style = preg_replace_callback('/url\([\'"]?(?![a-z]+:|\/+)([^\'")]+)[\'"]?\)/i', [$css_optimizer, 'rewriteFileURI'], $style);
+
+    $filepath = \Drupal::service('file_system')->saveData($style, $new_path, FileSystemInterface::EXISTS_REPLACE);
+  }
+  
+  return $new_path;
+}
+
+function minif_assets_minify_js($path) {
+  if (file_exists($path)) {
+    $file_system = \Drupal::service('file_system');
+    $hash = hash_file("md5", $path);
+    $new_path = 'public://minified/' . $hash . '.min.js';
+
+    if (!file_exists($new_path)) {
+      $minifier = new Minify\JS($path);
+      $minified_dir = 'public://minified/';
+
+      $file_system->prepareDirectory($minified_dir, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+
+      \Drupal::service('file_system')->saveData($minifier->minify(), $new_path, FileSystemInterface::EXISTS_REPLACE);
+    }
+  }
+  
+  return $new_path ?? $path;
+}

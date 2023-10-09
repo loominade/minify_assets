@@ -1,0 +1,4 @@
+type: module
+name: Minify assets
+description: Minfies assets without aggregating them.
+core_version_requirement: ^8.8 || ^9

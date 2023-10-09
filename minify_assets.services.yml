@@ -1,0 +1,9 @@
+services:
+  minify_assets.defer_css:
+    class: Drupal\minify_assets\Asset\DeferCss
+    arguments: [ '@config.factory' ]
+  minify_assets.init_subscriber:
+    class: Drupal\minify_assets\EventSubscriber\InitSubscriber
+    tags:
+      - { name: event_subscriber }
+    arguments: [ '@minify_assets.defer_css' ]

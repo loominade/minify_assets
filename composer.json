@@ -1,0 +1,16 @@
+{
+    "name": "loominade/minify_assets",
+    "description": "Minify assets indiviually",
+    "type": "drupal-module",
+    "require": {
+        "matthiasmullie/minify": "1.3"
+    },
+    "license": "WTFpl",
+    "authors": [
+        {
+            "name": "A Mueller",
+            "email": "a.mueller@loom.de"
+        }
+    ],
+    "minimum-stability": "dev"
+}
