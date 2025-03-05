@@ -6,6 +6,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Component\Utility\Crypt;
 use Drupal\Core\Asset\AttachedAssets;
 use Drupal\Core\Extension\ExtensionList;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Modify stylesheet links to defer them. May lead to Flash of unstyled content.
@@ -74,12 +75,30 @@ class DeferCss {
       }
     }
 
+    // input sdc libraries
+    $themes = \Drupal::config('core.extension')->get('theme');
+    $sdc_libraries = [];
+    foreach ($themes as $theme_name => $theme_weight) {
+      $sdc_libraries = $this->getSdcLibrariesFromTheme($theme_name);
+      if ($sdc_libraries) {
+        foreach ($sdc_libraries as $sdc_library) {
+          $all_libraries[] = $sdc_library['library'];
+          $deferable_css[] = $sdc_library['css'];
+        }
+      }
+    }
+
     $resolver = \Drupal::service('asset.resolver');
 
     $assets = new AttachedAssets();
     $assets->setLibraries($all_libraries);
 
     $all_css = $resolver->getCssAssets($assets, false);
+
+    foreach ($all_css as $key => $entry) {
+      $all_css[str_replace('core/../' , '', $key)] = $entry;
+      unset($all_css[$key]);
+    }
 
     $output = [];
     foreach ($all_css as $key => $entry) {
@@ -94,6 +113,35 @@ class DeferCss {
     }
     
     return $output;
+  }
+
+  protected function getSdcLibrariesFromTheme($theme_name) {
+    $sdc_manager = \Drupal::service('plugin.manager.sdc');
+    $theme_handler = \Drupal::service('theme_handler');
+    $theme_path = $theme_handler->getTheme($theme_name)->getPath();
+    $sdc_plugins = $sdc_manager->getDefinitions();
+
+    $libraries = [];
+
+    foreach ($sdc_plugins as $plugin_id => $plugin_definition) {
+      if (str_starts_with($plugin_definition['provider'], $theme_name)) {
+        $component_yaml_path = $theme_path . '/components/' . $plugin_definition['machineName'] . '/' . $plugin_definition['machineName'] . '.component.yml';
+        if (file_exists($component_yaml_path)) {
+          $yaml_content = Yaml::parseFile($component_yaml_path);
+          if (!empty($yaml_content['libraryOverrides'])) {
+            if (isset($yaml_content['libraryOverrides']['css']['state'])) {
+              foreach ($yaml_content['libraryOverrides']['css']['state'] as $key => $css) {
+                $libraries[] = [
+                  'library' => 'core/components.' . $plugin_definition['provider'] . '--' . $plugin_definition['machineName'],
+                  'css' => $theme_path . '/components/' . $plugin_definition['machineName'] . '/' . $key,
+                ];
+              }
+            }
+          }
+        }
+      }
+    }
+      return $libraries;
   }
 
   /**
